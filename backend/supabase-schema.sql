@@ -305,8 +305,81 @@ create policy "workflow_logs_insert_all" on public.workflow_logs
   for insert with check (true);
 
 -- =====================================================================
+-- 9. APPLICATIONS  (application tracking for n8n workflow)
+-- =====================================================================
+create table if not exists public.applications (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  job_id          uuid not null references public.jobs(id) on delete cascade,
+  status          text not null default 'Applied'
+                    check (status in ('Applied','Phone Screen','Interviewing','Offer','Rejected','Withdrawn','Archived')),
+  applied_at      timestamptz not null default now(),
+  interview_at    timestamptz,
+  follow_up_at    timestamptz,
+  notes           text,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique(user_id, job_id)
+);
+create index if not exists idx_applications_user_id on public.applications(user_id);
+create index if not exists idx_applications_job_id  on public.applications(job_id);
+create index if not exists idx_applications_status  on public.applications(status);
+
+-- =====================================================================
+-- 10. COVER LETTERS  (AI-generated cover letters)
+-- =====================================================================
+create table if not exists public.cover_letters (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  job_id          uuid not null references public.jobs(id) on delete cascade,
+  resume_id       uuid references public.resumes(id) on delete set null,
+  content         text not null,
+  tone            text default 'professional',
+  created_at      timestamptz not null default now()
+);
+create index if not exists idx_cover_letters_user_id on public.cover_letters(user_id);
+create index if not exists idx_cover_letters_job_id  on public.cover_letters(job_id);
+
+-- =====================================================================
+-- RLS FOR NEW TABLES
+-- =====================================================================
+alter table public.applications  enable row level security;
+alter table public.cover_letters enable row level security;
+
+drop policy if exists "applications_select_own" on public.applications;
+create policy "applications_select_own" on public.applications
+  for select using (auth.uid() = user_id);
+drop policy if exists "applications_insert_own" on public.applications;
+create policy "applications_insert_own" on public.applications
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "applications_update_own" on public.applications;
+create policy "applications_update_own" on public.applications
+  for update using (auth.uid() = user_id);
+drop policy if exists "applications_delete_own" on public.applications;
+create policy "applications_delete_own" on public.applications
+  for delete using (auth.uid() = user_id);
+
+drop policy if exists "cover_letters_select_own" on public.cover_letters;
+create policy "cover_letters_select_own" on public.cover_letters
+  for select using (auth.uid() = user_id);
+drop policy if exists "cover_letters_insert_own" on public.cover_letters;
+create policy "cover_letters_insert_own" on public.cover_letters
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "cover_letters_delete_own" on public.cover_letters;
+create policy "cover_letters_delete_own" on public.cover_letters
+  for delete using (auth.uid() = user_id);
+
+-- =====================================================================
+-- TRIGGER: auto-update updated_at on applications
+-- =====================================================================
+drop trigger if exists applications_touch on public.applications;
+create trigger applications_touch before update on public.applications
+  for each row execute function public.touch_updated_at();
+
+-- =====================================================================
 -- DONE. Verify with:
 --   select table_name from information_schema.tables
 --   where table_schema = 'public' order by table_name;
--- Expected: profiles, jobs, resumes, user_settings, job_activities, notifications
+-- Expected: profiles, jobs, resumes, user_settings, job_activities, notifications,
+--           optimized_resumes, workflow_logs, applications, cover_letters
 -- =====================================================================

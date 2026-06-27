@@ -2,6 +2,9 @@ import "dotenv/config"
 import express from "express"
 import cors from "cors"
 import morgan from "morgan"
+import helmet from "helmet"
+import compression from "compression"
+import rateLimit from "express-rate-limit"
 import path from "path"
 import { fileURLToPath } from "url"
 
@@ -14,6 +17,8 @@ import scrapeRoutes from "./routes/scrape.js"
 import dashboardRoutes from "./routes/dashboard.js"
 import optimizeRoutes from "./routes/optimize.js"
 import emailRoutes from "./routes/email.js"
+import coverLetterRoutes from "./routes/coverLetter.js"
+import adminRoutes from "./routes/admin.js"
 import { errorHandler } from "./middleware/errorHandler.js"
 import { supabaseAdmin } from "./config/supabase.js"
 
@@ -32,7 +37,19 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   process.exit(1)
 }
 
-// ---- Middleware ----
+// ---- Security & Performance Middleware ----
+app.use(helmet())
+app.use(compression())
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please try again later." },
+})
+app.use("/api/", limiter)
+
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
@@ -64,6 +81,8 @@ app.use("/api/scrape", scrapeRoutes)
 app.use("/api/dashboard", dashboardRoutes)
 app.use("/api/optimize", optimizeRoutes)
 app.use("/api/email", emailRoutes)
+app.use("/api/cover-letter", coverLetterRoutes)
+app.use("/api/admin", adminRoutes)
 
 // ---- Serve frontend static files in production ----
 if (isProduction) {
