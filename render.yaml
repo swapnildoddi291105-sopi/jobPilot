@@ -3,7 +3,7 @@ services:
     name: jobpilot-backend
     env: node
     rootDir: .
-    buildCommand: npm install && npm run build && cd backend && npm install
+    buildCommand: npm install --include=dev && npm run build && cd backend && npm install
     startCommand: cd backend && node src/server.js
     healthCheckPath: /api/health
     envVars:
