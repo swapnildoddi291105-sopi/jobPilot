@@ -135,7 +135,7 @@ app.listen(PORT, () => {
   console.log(`   Client origin: ${process.env.CLIENT_URL || "http://localhost:5173"}`)
   console.log(`   Environment: ${process.env.NODE_ENV || "development"}`)
   if (isProduction) {
-    const renderUrl = process.env.RENDER_EXTERNAL_URL || "your-app.onrender.com"
+    const renderUrl = process.env.RENDER_EXTERNAL_URL?.replace(/^https?:\/\//, "") || "your-app.onrender.com"
     console.log(`\n⚠️  IMPORTANT: Add this URL to Supabase Auth settings:`)
     console.log(`   Site URL: https://${renderUrl}`)
     console.log(`   Redirect URLs: https://${renderUrl}/**`)
