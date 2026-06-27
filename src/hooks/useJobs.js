@@ -32,7 +32,7 @@ function mapDashboardStats(data) {
     recentJobs: (data.recentJobs || []).map(mapJob),
     weeklyActivity: (data.weeklyActivity || []).map((d) => ({
       day: d.day,
-      applications: d.applications ?? d.applications ?? 0,
+      applications: d.applications ?? 0,
       responses: d.responses ?? 0,
     })),
   }
@@ -63,7 +63,7 @@ export function useMonthlyTrend() {
   return useQuery({
     queryKey: ["monthly-trend"],
     queryFn: () => api.get("/dashboard/analytics").then((r) => (r.data.monthlyTrend || []).map((m) => ({
-      month: m.month || m.month,
+      month: m.month,
       applications: m.applications ?? 0,
       interviews: m.interviews ?? 0,
       offers: m.offers ?? 0,
@@ -122,7 +122,7 @@ export function useSaveJob() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (job) => api.post("/jobs", job).then((r) => mapJob(r.data)),
-    onSuccess: () => qc.invalidateQueries(["jobs"]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   })
 }
 
@@ -130,7 +130,7 @@ export function useUpdateJob() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, ...updates }) => api.patch(`/jobs/${id}`, updates).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries(["jobs"]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   })
 }
 
@@ -138,7 +138,7 @@ export function useDeleteJob() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id) => api.delete(`/jobs/${id}`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries(["jobs"]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["jobs"] }),
   })
 }
 
@@ -214,7 +214,7 @@ export function useUpdateSettings() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (settings) => api.put("/settings", settings).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries(["settings"]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings"] }),
   })
 }
 
@@ -223,8 +223,8 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: (data) => api.patch("/settings/profile", data).then((r) => r.data),
     onSuccess: () => {
-      qc.invalidateQueries(["user-profile"])
-      qc.invalidateQueries(["settings"])
+      qc.invalidateQueries({ queryKey: ["user-profile"] })
+      qc.invalidateQueries({ queryKey: ["settings"] })
     },
   })
 }

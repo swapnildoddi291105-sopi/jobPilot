@@ -4,10 +4,10 @@ import { createClient } from "@supabase/supabase-js"
 // Configure via Vite env vars, falling back to the provided project values.
 const SUPABASE_URL =
   import.meta.env.VITE_SUPABASE_URL ||
-  "https://vpndvocbunvctjcxzpdb.supabase.co"
+  "https://ahfxbqpiqgihciukhjfk.supabase.co"
 const SUPABASE_ANON_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwbmR2b2NidW52Y3RqY3h6cGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0Nzc2NjAsImV4cCI6MjA5ODA1MzY2MH0._6wP4NI4CdzhifwpNH03yqGkUQ7sYp53nLD4WIaolrs"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoZnhicXBpcWdpaGNpdWtoamZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1NzU1NDEsImV4cCI6MjA5ODE1MTU0MX0.PFLHcFAQnxhnvZun8Zh0zM-cCQnbkF79wdHIvnJK9k0"
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

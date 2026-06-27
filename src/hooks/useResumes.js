@@ -59,7 +59,7 @@ export function useUploadResume() {
         })
         .then((r) => r.data)
     },
-    onSuccess: () => qc.invalidateQueries(["resumes"]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["resumes"] }),
   })
 }
 
@@ -67,7 +67,7 @@ export function useDeleteResume() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id) => api.delete(`/resumes/${id}`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries(["resumes"]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["resumes"] }),
   })
 }
 
@@ -75,6 +75,6 @@ export function useUpdateResume() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, ...updates }) => api.patch(`/resumes/${id}`, updates).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries(["resumes"]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["resumes"] }),
   })
 }

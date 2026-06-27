@@ -1,7 +1,7 @@
 -- =====================================================================
 -- JobPilot — Supabase Schema
 -- Run this in: Supabase Dashboard → SQL Editor → New query → Paste → Run
--- Project: https://vpndvocbunvctjcxzpdb.supabase.co
+-- Project: https://ahfxbqpiqgihciukhjfk.supabase.co
 -- =====================================================================
 -- Creates 6 tables + Row Level Security (RLS) policies so each user
 -- can only read/write their own data.

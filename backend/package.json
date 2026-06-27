@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --experimental-vm-modules src/test.js",
+    "inspect-schema": "node scripts/inspect-schema.js",
+    "lint": "node --check src/server.js && node --check src/config/supabase.js && node --check src/middleware/auth.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

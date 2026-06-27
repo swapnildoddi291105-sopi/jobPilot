@@ -12,13 +12,23 @@ function loadGoogleCredentials() {
   const env = process.env.GOOGLE_APPLICATION_CREDENTIALS
   if (!env) {
     const fallback = path.resolve(__dirname, "../../credentials/google-service-account.json")
-    return JSON.parse(readFileSync(fallback, "utf-8"))
+    try {
+      return JSON.parse(readFileSync(fallback, "utf-8"))
+    } catch {
+      throw new Error(
+        "GOOGLE_APPLICATION_CREDENTIALS not set and credentials file not found at " + fallback
+      )
+    }
   }
   const trimmed = env.trim()
   if (trimmed.startsWith("{")) {
     return JSON.parse(trimmed)
   }
-  return JSON.parse(readFileSync(path.resolve(trimmed), "utf-8"))
+  try {
+    return JSON.parse(readFileSync(path.resolve(trimmed), "utf-8"))
+  } catch {
+    throw new Error("Could not read credentials file at " + path.resolve(trimmed))
+  }
 }
 
 function initDrive() {

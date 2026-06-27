@@ -3,7 +3,7 @@ services:
     name: jobpilot-backend
     env: node
     rootDir: .
-    buildCommand: npm install --include=dev && npm run build && cd backend && npm install
+    buildCommand: npm install && npm run build && cd backend && npm install
     startCommand: cd backend && node src/server.js
     healthCheckPath: /api/health
     envVars:
@@ -26,4 +26,10 @@ services:
       - key: APIFY_API_TOKEN
         sync: false
       - key: APIFY_ACTOR_ID
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_API_URL
         sync: false

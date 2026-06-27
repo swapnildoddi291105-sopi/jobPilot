@@ -28,17 +28,44 @@ const PORT = process.env.PORT || 5000
 const isProduction = process.env.NODE_ENV === "production"
 
 // ---- Startup validation ----
-if (!supabaseAdmin) {
-  console.error("[startup] FATAL: SUPABASE_SERVICE_KEY is not set. All database operations will fail.")
+const missingVars = []
+if (!process.env.SUPABASE_URL) missingVars.push("SUPABASE_URL")
+if (!process.env.SUPABASE_ANON_KEY) missingVars.push("SUPABASE_ANON_KEY")
+if (!process.env.SUPABASE_SERVICE_KEY) missingVars.push("SUPABASE_SERVICE_KEY")
+
+if (missingVars.length > 0) {
+  console.error(`[startup] FATAL: Missing required environment variables: ${missingVars.join(", ")}`)
+  console.error("[startup] Copy backend/.env.example to backend/.env and fill in the values.")
   process.exit(1)
 }
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-  console.error("[startup] FATAL: SUPABASE_URL or SUPABASE_ANON_KEY is not set.")
+
+if (!supabaseAdmin) {
+  console.error("[startup] FATAL: Supabase admin client could not be initialized.")
   process.exit(1)
 }
 
 // ---- Security & Performance Middleware ----
-app.use(helmet())
+const supabaseUrl = process.env.SUPABASE_URL || "https://ahfxbqpiqgihciukhjfk.supabase.co"
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", supabaseUrl, "https://*.supabase.co", "wss://*.supabase.co"],
+        fontSrc: ["'self'", "https:", "data:"],
+        imgSrc: ["'self'", "data:"],
+        scriptSrc: ["'self'"],
+        scriptSrcAttr: ["'none'"],
+        styleSrc: ["'self'", "https:", "'unsafe-inline'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+  })
+)
 app.use(compression())
 
 const limiter = rateLimit({
@@ -52,7 +79,9 @@ app.use("/api/", limiter)
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: isProduction
+      ? [process.env.CLIENT_URL, "https://jobpilot-uzxx.onrender.com"].filter(Boolean)
+      : process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   })
 )
@@ -104,5 +133,12 @@ app.use(errorHandler)
 app.listen(PORT, () => {
   console.log(`\n🚀 JobPilot backend running on http://localhost:${PORT}`)
   console.log(`   Client origin: ${process.env.CLIENT_URL || "http://localhost:5173"}`)
-  console.log(`   Environment: ${process.env.NODE_ENV || "development"}\n`)
+  console.log(`   Environment: ${process.env.NODE_ENV || "development"}`)
+  if (isProduction) {
+    const renderUrl = process.env.RENDER_EXTERNAL_URL || "your-app.onrender.com"
+    console.log(`\n⚠️  IMPORTANT: Add this URL to Supabase Auth settings:`)
+    console.log(`   Site URL: https://${renderUrl}`)
+    console.log(`   Redirect URLs: https://${renderUrl}/**`)
+  }
+  console.log("")
 })
