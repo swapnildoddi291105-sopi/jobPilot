@@ -1,12 +1,9 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react"
-import { supabase, supabaseInitError } from "@/lib/supabaseClient"
+import { supabase } from "@/lib/supabaseClient"
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  if (supabaseInitError) {
-    throw new Error(supabaseInitError)
-  }
 
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
