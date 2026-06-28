@@ -12,31 +12,6 @@ export function ResumeUploader() {
   const inputRef = useRef(null)
   const { mutate: uploadResume, isPending } = useUploadResume()
 
-  const handleDrag = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
-    }
-  }, [])
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    const files = Array.from(e.dataTransfer.files)
-    handleFiles(files)
-  }, [handleFiles])
-
-  const handleChange = useCallback((e) => {
-    e.preventDefault()
-    const files = Array.from(e.target.files)
-    handleFiles(files)
-    e.target.value = ""
-  }, [handleFiles])
-
   const handleFiles = useCallback((files) => {
     for (const file of files) {
       if (!file.type.match(/pdf|msword|officedocument\.wordprocessingml/)) {
@@ -64,6 +39,31 @@ export function ResumeUploader() {
       )
     }
   }, [uploadResume])
+
+  const handleDrag = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
+  }, [])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    const files = Array.from(e.dataTransfer.files)
+    handleFiles(files)
+  }, [handleFiles])
+
+  const handleChange = useCallback((e) => {
+    e.preventDefault()
+    const files = Array.from(e.target.files)
+    handleFiles(files)
+    e.target.value = ""
+  }, [handleFiles])
 
   const inProgress = isPending || uploading
 
