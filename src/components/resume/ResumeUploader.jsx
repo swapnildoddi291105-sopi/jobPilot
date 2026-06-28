@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Upload, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { useState, useCallback, useRef } from "react"
 import { useUploadResume } from "@/hooks/useResumes"
 
@@ -28,14 +28,14 @@ export function ResumeUploader() {
     setDragActive(false)
     const files = Array.from(e.dataTransfer.files)
     handleFiles(files)
-  }, [])
+  }, [handleFiles])
 
   const handleChange = useCallback((e) => {
     e.preventDefault()
     const files = Array.from(e.target.files)
     handleFiles(files)
     e.target.value = ""
-  }, [])
+  }, [handleFiles])
 
   const handleFiles = useCallback((files) => {
     for (const file of files) {

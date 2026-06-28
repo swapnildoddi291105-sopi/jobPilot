@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Search, X, Filter } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 const statuses = ["Applied", "Interviewing", "Offer", "Rejected", "Saved", "Phone Screen"]
 const sources = ["LinkedIn", "Indeed", "Referral", "Company Site", "Glassdoor", "AngelList"]

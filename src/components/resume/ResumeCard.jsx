@@ -1,9 +1,8 @@
-import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils"
-import { FileText, Download, Eye, Trash2, Clock, Target } from "lucide-react"
+import { FileText, Download, Eye, Clock, Target } from "lucide-react"
 
 export function ResumeCard({ resume, onView }) {
   const score = resume.atsScore

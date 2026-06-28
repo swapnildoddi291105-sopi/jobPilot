@@ -9,6 +9,8 @@ const router = Router()
  * Body: { email, password, fullName }
  * Creates the auth user AND a profile row.
  */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 router.post(
   "/register",
   asyncHandler(async (req, res) => {
@@ -16,6 +18,12 @@ router.post(
 
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" })
+    }
+    if (!EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" })
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" })
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -45,6 +53,9 @@ router.post(
 
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" })
+    }
+    if (!EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" })
     }
 
     const { data, error } = await supabase.auth.signInWithPassword({

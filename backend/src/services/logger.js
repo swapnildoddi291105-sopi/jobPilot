@@ -1,7 +1,5 @@
 import { supabaseAdmin } from "../config/supabase.js"
 
-const LOG_LEVELS = { info: "info", warn: "warn", error: "error" }
-
 export function createWorkflowLogger(workflowName) {
   async function log({ userId, status, message, meta }) {
     const payload = {

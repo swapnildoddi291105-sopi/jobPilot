@@ -1,17 +1,19 @@
 import { supabaseAdmin } from "../config/supabase.js"
 import { optimizeResume } from "../services/gemini.js"
 import { generateResumePDF } from "../utils/latex.js"
-import { getDrive, getDriveError, DRIVE_FOLDER_ID } from "../config/google.js"
+import { getDrive, DRIVE_FOLDER_ID } from "../config/google.js"
 
 export async function optimizeJob(req, res) {
   const { jobId } = req.params
+  const userId = req.user.id
+  const userEmail = req.user.email || ""
 
   try {
     const { data: job, error: jobErr } = await supabaseAdmin
       .from("jobs")
       .select("*")
       .eq("id", jobId)
-      .eq("user_id", req.user.id)
+      .eq("user_id", userId)
       .single()
     if (jobErr || !job) {
       return res.status(404).json({ error: "Job not found" })
@@ -20,7 +22,7 @@ export async function optimizeJob(req, res) {
     const { data: resume, error: resumeErr } = await supabaseAdmin
       .from("resumes")
       .select("*")
-      .eq("user_id", req.user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .single()
@@ -42,8 +44,8 @@ export async function optimizeJob(req, res) {
     try {
       pdfBuffer = await generateResumePDF(
         optimizedData,
-        req.user.email ? req.user.email.split("@")[0] : "Candidate",
-        req.user.email || ""
+        userEmail ? userEmail.split("@")[0] : "Candidate",
+        userEmail
       )
 
       if (pdfBuffer && getDrive() && DRIVE_FOLDER_ID) {
@@ -78,7 +80,7 @@ export async function optimizeJob(req, res) {
       .from("optimized_resumes")
       .insert({
         job_id: jobId,
-        user_id: req.user.id,
+        user_id: userId,
         resume_pdf_url: pdfUrl,
         ats_score: optimizedData.ats_score || null,
         missing_keywords: optimizedData.missing_keywords || [],
@@ -92,7 +94,7 @@ export async function optimizeJob(req, res) {
       .from("jobs")
       .update({ status: "Optimized" })
       .eq("id", jobId)
-      .eq("user_id", req.user.id)
+      .eq("user_id", userId)
 
     res.json({
       message: "Resume optimized successfully",
@@ -105,6 +107,54 @@ export async function optimizeJob(req, res) {
   } catch (err) {
     console.error("[optimize] Optimization error:", err)
     res.status(500).json({ error: err.message })
+  }
+}
+
+async function optimizeResumeForJob(job, userId) {
+  const { data: resume, error: resumeErr } = await supabaseAdmin
+    .from("resumes")
+    .select("extracted_text")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+  if (resumeErr || !resume) {
+    return { error: "No resume found. Please upload a resume first." }
+  }
+
+  const optimizedData = await optimizeResume(
+    resume.extracted_text || "",
+    job.description || "",
+    job.title || ""
+  )
+
+  const { data: saved, error: saveErr } = await supabaseAdmin
+    .from("optimized_resumes")
+    .insert({
+      job_id: job.id,
+      user_id: userId,
+      ats_score: optimizedData.ats_score || null,
+      missing_keywords: optimizedData.missing_keywords || [],
+      optimized_data: optimizedData,
+    })
+    .select()
+    .single()
+  if (saveErr) return { error: saveErr.message }
+
+  await supabaseAdmin
+    .from("jobs")
+    .update({ status: "Optimized" })
+    .eq("id", job.id)
+    .eq("user_id", userId)
+
+  return {
+    data: {
+      message: "Resume optimized successfully",
+      atsScore: optimizedData.ats_score,
+      missingKeywords: optimizedData.missing_keywords,
+      improvements: optimizedData.improvements_made,
+      id: saved.id,
+    },
   }
 }
 
@@ -132,23 +182,14 @@ export async function optimizeBatch(req, res) {
     const results = []
     for (const job of jobs) {
       try {
-        const mockReq = {
-          params: { jobId: job.id },
-          user: { id: userId, email: req.user.email || "" },
-        }
-        const mockRes = {
-          _json: null,
-          _status: 200,
-          json: (d) => { mockRes._json = d },
-          status: (s) => { mockRes._status = s; return mockRes },
-        }
-        await optimizeJob(mockReq, mockRes)
+        const { data, error } = await optimizeResumeForJob(job, userId)
+        if (error) throw new Error(error)
         results.push({
           jobId: job.id,
           title: job.title,
           company: job.company,
-          status: mockRes._status,
-          result: mockRes._json,
+          status: 200,
+          result: data,
         })
       } catch (err) {
         results.push({ jobId: job.id, title: job.title, company: job.company, error: err.message })

@@ -1,0 +1,562 @@
+{
+  "name": "AI Job Search Automation Pipeline",
+  "nodes": [
+    {
+      "id": "schedule-001",
+      "name": "Daily Schedule (7 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "config-002",
+      "name": "Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [280, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "BACKEND_URL",
+              "value": "https://jobpilot-uzxx.onrender.com"
+            },
+            {
+              "name": "ADMIN_TOKEN",
+              "value": "={{ $env.N8N_ADMIN_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "fetch-003",
+      "name": "Fetch Active Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [560, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/admin/users",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "loop-users-004",
+      "name": "Loop Through Users",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [840, 300],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "trigger-search-005",
+      "name": "Trigger Job Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/admin/trigger-search",
+        "authentication": "none",
+        "sendHeaders": true,
+        "sendBody": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "userId",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "wait-apify-006",
+      "name": "Wait for Apify Completion",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1400, 300],
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds",
+        "options": {}
+      }
+    },
+    {
+      "id": "dedup-007",
+      "name": "Deduplicate Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/admin/dedup-jobs",
+        "authentication": "none",
+        "sendHeaders": true,
+        "sendBody": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "userId",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "rank-008",
+      "name": "Rank and Select Top 5 Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1960, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/admin/rank-jobs",
+        "authentication": "none",
+        "sendHeaders": true,
+        "sendBody": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "userId",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "topN",
+              "value": 5
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "extract-top5-009",
+      "name": "Extract Top 5 Job IDs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2240, 300],
+      "parameters": {
+        "language": "javaScript",
+        "code": "const topN = $input.first().json.topN;\n\nif (!topN || topN.length === 0) {\n  return [{ json: { skipped: true, reason: 'No ranked jobs found' } }];\n}\n\nreturn topN.map(job => ({\n  json: {\n    jobId: job.id,\n    title: job.title,\n    company: job.company,\n    score: job.score\n  }\n}));"
+      }
+    },
+    {
+      "id": "loop-jobs-010",
+      "name": "Loop Through Top 5 Jobs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [2520, 300],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "optimize-011",
+      "name": "Optimize Resume for Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2800, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/optimize/{{ $json.jobId }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "cover-letter-012",
+      "name": "Generate Cover Letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2800, 500],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/cover-letter/generate",
+        "authentication": "none",
+        "sendHeaders": true,
+        "sendBody": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "jobId",
+              "value": "={{ $json.jobId }}"
+            },
+            {
+              "name": "tone",
+              "value": "professional"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "email-013",
+      "name": "Send Email with Resume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [3080, 350],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/email/send",
+        "authentication": "none",
+        "sendHeaders": true,
+        "sendBody": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $json.user_email }}"
+            },
+            {
+              "name": "subject",
+              "value": "Your Optimized Job Application Materials"
+            },
+            {
+              "name": "body",
+              "value": "Hi there,\n\nYour optimized resume and cover letter are ready.\n\nBest,\nJobPilot AI"
+            },
+            {
+              "name": "optimizedResumeId",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      }
+    },
+    {
+      "id": "log-success-014",
+      "name": "Log Workflow Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3360, 350],
+      "parameters": {
+        "language": "javaScript",
+        "code": "const now = new Date().toISOString();\nconsole.log(`[WORKFLOW SUCCESS] ${now} completed`);\nreturn [{ json: { status: 'completed', timestamp: now } }];"
+      }
+    },
+    {
+      "id": "error-notify-015",
+      "name": "Error: Notify Admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [3080, 700],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Configuration').item.json.BACKEND_URL }}/api/admin/notify",
+        "authentication": "none",
+        "sendHeaders": true,
+        "sendBody": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-admin-token",
+              "value": "={{ $('Configuration').item.json.ADMIN_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "subject",
+              "value": "n8n Workflow Failed"
+            },
+            {
+              "name": "message",
+              "value": "={{ JSON.stringify($json) }}"
+            },
+            {
+              "name": "level",
+              "value": "error"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Schedule (7 AM)": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration": {
+      "main": [
+        [
+          {
+            "node": "Fetch Active Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Active Users": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Users": {
+      "main": [
+        [
+          {
+            "node": "Trigger Job Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Job Search": {
+      "main": [
+        [
+          {
+            "node": "Wait for Apify Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Apify Completion": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Jobs": {
+      "main": [
+        [
+          {
+            "node": "Rank and Select Top 5 Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank and Select Top 5 Jobs": {
+      "main": [
+        [
+          {
+            "node": "Extract Top 5 Job IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Top 5 Job IDs": {
+      "main": [
+        [
+          {
+            "node": "Loop Through Top 5 Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Through Top 5 Jobs": {
+      "main": [
+        [
+          {
+            "node": "Optimize Resume for Job",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Optimize Resume for Job": {
+      "main": [
+        [
+          {
+            "node": "Send Email with Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Send Email with Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email with Resume": {
+      "main": [
+        [
+          {
+            "node": "Log Workflow Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": []
+}

@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useTheme } from "@/hooks/useTheme"
 import { useAuth } from "@/hooks/useAuth"
@@ -22,7 +21,6 @@ import {
   User,
   LogOut,
   Settings,
-  HelpCircle,
 } from "lucide-react"
 
 const pageTitles = {

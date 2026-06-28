@@ -2,40 +2,49 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ApplicationChart } from "@/components/analytics/ApplicationChart"
 import { SourceChart } from "@/components/analytics/SourceChart"
 import { StatusChart } from "@/components/analytics/StatusChart"
+import { useMonthlyTrend } from "@/hooks/useJobs"
 import { TrendingUp, Target, Percent, BarChart3 } from "lucide-react"
 
-const kpis = [
-  {
-    label: "Avg. Response Time",
-    value: "4.2 days",
-    change: "-12%",
-    positive: true,
-    icon: TrendingUp,
-  },
-  {
-    label: "Interview Rate",
-    value: "26.8%",
-    change: "+3.5%",
-    positive: true,
-    icon: Target,
-  },
-  {
-    label: "Offer Rate",
-    value: "11.4%",
-    change: "+1.8%",
-    positive: true,
-    icon: Percent,
-  },
-  {
-    label: "Total Applications",
-    value: "315",
-    change: "+22%",
-    positive: true,
-    icon: BarChart3,
-  },
-]
-
 export default function AnalyticsPage() {
+  const { data: trend } = useMonthlyTrend()
+
+  const totalApplications = trend?.reduce((sum, m) => sum + m.applications, 0) || 0
+  const totalInterviews = trend?.reduce((sum, m) => sum + m.interviews, 0) || 0
+  const totalOffers = trend?.reduce((sum, m) => sum + m.offers, 0) || 0
+  const interviewRate = totalApplications > 0 ? ((totalInterviews / totalApplications) * 100).toFixed(1) : "0.0"
+  const offerRate = totalApplications > 0 ? ((totalOffers / totalApplications) * 100).toFixed(1) : "0.0"
+
+  const kpis = [
+    {
+      label: "Interview Rate",
+      value: `${interviewRate}%`,
+      change: "",
+      positive: true,
+      icon: Target,
+    },
+    {
+      label: "Offer Rate",
+      value: `${offerRate}%`,
+      change: "",
+      positive: true,
+      icon: Percent,
+    },
+    {
+      label: "Total Applications",
+      value: String(totalApplications),
+      change: "",
+      positive: true,
+      icon: BarChart3,
+    },
+    {
+      label: "Active Interviews",
+      value: String(totalInterviews),
+      change: "",
+      positive: true,
+      icon: TrendingUp,
+    },
+  ]
+
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
@@ -52,9 +61,6 @@ export default function AnalyticsPage() {
                   <kpi.icon className="h-5 w-5 text-primary" />
                 </div>
               </div>
-              <p className={`text-xs mt-2 font-medium ${kpi.positive ? "text-emerald-500" : "text-rose-500"}`}>
-                {kpi.positive ? "↑" : "↓"} {kpi.change} from last period
-              </p>
             </CardContent>
           </Card>
         ))}

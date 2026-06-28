@@ -52,7 +52,7 @@ export function useWeeklyActivity() {
   const { isAuthenticated } = useAuth()
   return useQuery({
     queryKey: ["weekly-activity"],
-    queryFn: () => api.get("/dashboard/stats").then((r) => r.data.weeklyActivity.map((d) => ({ day: d.day, applications: d.applications, responses: 0 }))),
+    queryFn: () => api.get("/dashboard/stats").then((r) => (r.data.weeklyActivity || []).map((d) => ({ day: d.day, applications: d.applications || 0 }))),
     enabled: isAuthenticated,
     staleTime: 1000 * 60,
   })

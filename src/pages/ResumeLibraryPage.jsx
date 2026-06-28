@@ -3,7 +3,6 @@ import { useResumes } from "@/hooks/useResumes"
 import { ResumeCard } from "@/components/resume/ResumeCard"
 import { ResumeViewer } from "@/components/resume/ResumeViewer"
 import { ResumeUploader } from "@/components/resume/ResumeUploader"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -11,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Loader2, FileText, Download } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 export default function ResumeLibraryPage() {
   const [sortBy, setSortBy] = useState("date")

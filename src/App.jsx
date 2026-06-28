@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/hooks/useTheme"
 import { QueryProvider } from "@/providers/QueryProvider"
 import { AuthProvider, useAuth } from "@/hooks/useAuth"
 import { AppLayout } from "@/components/layout/AppLayout"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 import AuthPage from "@/pages/AuthPage"
 import DashboardPage from "@/pages/DashboardPage"
 import JobHistoryPage from "@/pages/JobHistoryPage"
@@ -46,13 +47,15 @@ function ProtectedRoutes() {
 function App() {
   return (
     <ThemeProvider>
-      <QueryProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <ProtectedRoutes />
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryProvider>
+      <ErrorBoundary>
+        <QueryProvider>
+          <BrowserRouter>
+            <AuthProvider>
+              <ProtectedRoutes />
+            </AuthProvider>
+          </BrowserRouter>
+        </QueryProvider>
+      </ErrorBoundary>
     </ThemeProvider>
   )
 }

@@ -19,6 +19,10 @@ const typeColors = {
   "Phone Screen": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
 }
 
+function getTypeColor(status) {
+  return typeColors[status] || "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
+}
+
 export function UpcomingTasks() {
   const { data: stats, isLoading } = useDashboardStats()
 
@@ -82,7 +86,7 @@ export function UpcomingTasks() {
                     <p className="text-xs text-muted-foreground truncate">{job.title}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge variant="outline" className={typeColors[job.status]}>
+                    <Badge variant="outline" className={getTypeColor(job.status)}>
                       <TypeIcon className="h-3 w-3 mr-1" />
                       {job.status}
                     </Badge>

@@ -33,10 +33,7 @@ export function useResumes({ sortBy = "date", order = "desc" } = {}) {
     queryFn: () =>
       api
         .get("/resumes", { params: { sortBy, order } })
-        .then((r) => {
-          const data = Array.isArray(r.data) ? r.data : (r.data?.resumes || [])
-          return data.map(mapResume)
-        }),
+        .then((r) => (r.data?.resumes || []).map(mapResume)),
     enabled: isAuthenticated,
     staleTime: 1000 * 60,
   })

@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useWeeklyActivity } from "@/hooks/useJobs"
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -27,22 +27,12 @@ export function ActivityChart() {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold">Weekly Activity</CardTitle>
-        <CardDescription>Applications and responses this week</CardDescription>
+        <CardDescription>Applications this week</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={activity} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorApplications" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorResponses" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <BarChart data={activity} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--color-border))" vertical={false} />
               <XAxis
                 dataKey="day"
@@ -64,35 +54,19 @@ export function ActivityChart() {
                   color: "hsl(var(--color-popover-foreground))",
                 }}
               />
-              <Area
-                type="monotone"
+              <Bar
                 dataKey="applications"
-                stroke="#6366f1"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorApplications)"
+                fill="#6366f1"
+                radius={[4, 4, 0, 0]}
                 name="Applications"
               />
-              <Area
-                type="monotone"
-                dataKey="responses"
-                stroke="#10b981"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorResponses)"
-                name="Responses"
-              />
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="flex items-center gap-6 mt-2">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-[#6366f1]" />
             <span className="text-sm text-muted-foreground">Applications</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 rounded-full bg-[#10b981]" />
-            <span className="text-sm text-muted-foreground">Responses</span>
           </div>
         </div>
       </CardContent>

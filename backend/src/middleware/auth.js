@@ -27,7 +27,7 @@ export async function requireAuth(req, res, next) {
 
     req.user = { id: user.id, email: user.email }
     next()
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: "Authentication failed" })
   }
 }

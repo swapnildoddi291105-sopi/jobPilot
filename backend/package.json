@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "build": "node -e \"console.log('Backend is a Node.js app—no build step required.')\"",
     "test": "node --experimental-vm-modules src/test.js",
     "inspect-schema": "node scripts/inspect-schema.js",
     "lint": "node --check src/server.js && node --check src/config/supabase.js && node --check src/middleware/auth.js"

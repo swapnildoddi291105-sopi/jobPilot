@@ -11,7 +11,7 @@ router.post(
   "/send",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const { to, subject, body, jobId, optimizedResumeId } = req.body
+    const { to, subject, body, optimizedResumeId } = req.body
 
     if (!to) {
       return res.status(400).json({ error: "Recipient email (to) is required" })
