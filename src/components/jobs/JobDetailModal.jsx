@@ -1,9 +1,14 @@
+import { useState } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { formatDate } from "@/lib/utils"
+import { useUpdateJob } from "@/hooks/useJobs"
 import { MapPin, DollarSign, Globe, ExternalLink, Clock, FileText, StickyNote } from "lucide-react"
+
+const STATUS_OPTIONS = ["Saved", "Applied", "Phone Screen", "Interviewing", "Offer", "Rejected"]
 
 const statusVariantMap = {
   Applied: "info",
@@ -15,7 +20,23 @@ const statusVariantMap = {
 }
 
 export function JobDetailModal({ job, open, onClose }) {
+  const [updating, setUpdating] = useState(false)
+  const [newStatus, setNewStatus] = useState("")
+  const updateJob = useUpdateJob()
+
   if (!job) return null
+
+  async function handleUpdateStatus() {
+    if (!newStatus) return
+    setUpdating(true)
+    try {
+      await updateJob.mutateAsync({ id: job.id, status: newStatus })
+      setNewStatus("")
+      onClose()
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -105,10 +126,22 @@ export function JobDetailModal({ job, open, onClose }) {
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1" size="sm">
-              Update Status
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1">
+            <div className="flex flex-1 gap-2">
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="New status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={handleUpdateStatus} disabled={!newStatus || updating}>
+                {updating ? "..." : "Update"}
+              </Button>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => job.url && window.open(job.url, "_blank")}>
               <ExternalLink className="h-3.5 w-3.5" />
               View Job
             </Button>

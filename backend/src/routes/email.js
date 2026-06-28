@@ -5,6 +5,8 @@ import { asyncHandler } from "../middleware/errorHandler.js"
 import { sendEmail } from "../services/gmail.js"
 import { getDrive } from "../config/google.js"
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const router = Router()
 
 router.post(
@@ -15,6 +17,12 @@ router.post(
 
     if (!to) {
       return res.status(400).json({ error: "Recipient email (to) is required" })
+    }
+    if (!EMAIL_RE.test(to)) {
+      return res.status(400).json({ error: "Invalid recipient email format" })
+    }
+    if (subject && (subject.includes("\n") || subject.includes("\r"))) {
+      return res.status(400).json({ error: "Subject must not contain newlines" })
     }
 
     let userId

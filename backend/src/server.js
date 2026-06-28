@@ -50,7 +50,7 @@ if (!supabaseAdmin) {
 }
 
 // ---- Security & Performance Middleware ----
-const supabaseUrl = process.env.SUPABASE_URL || "https://ahfxbqpiqgihciukhjfk.supabase.co"
+const supabaseUrl = process.env.SUPABASE_URL
 app.use(
   helmet({
     contentSecurityPolicy: {

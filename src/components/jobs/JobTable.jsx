@@ -3,6 +3,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatDate } from "@/lib/utils"
+import { useDeleteJob } from "@/hooks/useJobs"
 import { ChevronLeft, ChevronRight, MoreHorizontal, Eye, Trash2, ExternalLink } from "lucide-react"
 import {
   DropdownMenu,
@@ -25,6 +26,7 @@ const PAGE_SIZE = 8
 
 export function JobTable({ jobs, isLoading, onSelectJob }) {
   const [page, setPage] = useState(1)
+  const deleteJob = useDeleteJob()
 
   if (isLoading) {
     return (
@@ -107,11 +109,11 @@ export function JobTable({ jobs, isLoading, onSelectJob }) {
                         <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); onSelectJob(job) }}>
                           <Eye className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem className="cursor-pointer" onClick={(e) => { e.stopPropagation(); if (job.url) window.open(job.url, "_blank") }}>
                           <ExternalLink className="mr-2 h-4 w-4" /> Open Job
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); if (confirm("Remove this job?")) deleteJob.mutate(job.id) }}>
                           <Trash2 className="mr-2 h-4 w-4" /> Remove
                         </DropdownMenuItem>
                       </DropdownMenuContent>

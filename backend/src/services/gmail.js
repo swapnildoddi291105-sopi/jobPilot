@@ -58,13 +58,17 @@ export function getGmailError() {
   return gmailError
 }
 
+function sanitizeHeader(value) {
+  return String(value).replace(/[\r\n]/g, "").trim()
+}
+
 function createMessage(to, subject, body, attachmentBuffer, attachmentName) {
   const boundary = `boundary${Date.now()}`
   const lines = []
 
   lines.push(`MIME-Version: 1.0`)
-  lines.push(`To: ${to}`)
-  lines.push(`Subject: ${subject}`)
+  lines.push(`To: ${sanitizeHeader(to)}`)
+  lines.push(`Subject: ${sanitizeHeader(subject || "")}`)
   lines.push(`Content-Type: multipart/mixed; boundary="${boundary}"`)
   lines.push("")
   lines.push(`--${boundary}`)
