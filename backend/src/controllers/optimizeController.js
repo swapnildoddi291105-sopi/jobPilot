@@ -5,8 +5,27 @@ import { getDrive, DRIVE_FOLDER_ID } from "../config/google.js"
 
 export async function optimizeJob(req, res) {
   const { jobId } = req.params
-  const userId = req.user.id
-  const userEmail = req.user.email || ""
+
+  let userId, userEmail
+
+  if (req.isAdmin) {
+    const { data: job } = await supabaseAdmin
+      .from("jobs")
+      .select("user_id")
+      .eq("id", jobId)
+      .single()
+    if (!job) return res.status(404).json({ error: "Job not found" })
+    userId = job.user_id
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .single()
+    userEmail = profile?.email || ""
+  } else {
+    userId = req.user.id
+    userEmail = req.user.email || ""
+  }
 
   try {
     const { data: job, error: jobErr } = await supabaseAdmin
@@ -103,6 +122,7 @@ export async function optimizeJob(req, res) {
       missingKeywords: optimizedData.missing_keywords,
       improvements: optimizedData.improvements_made,
       id: saved.id,
+      user_email: userEmail,
     })
   } catch (err) {
     console.error("[optimize] Optimization error:", err)

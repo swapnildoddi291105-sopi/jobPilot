@@ -57,6 +57,9 @@ async function runTests() {
   const { adminAuth } = await import("./middleware/adminAuth.js")
   assert(typeof adminAuth === "function", "adminAuth is a function")
 
+  const { requireAdminOrUser } = await import("./middleware/requireAdminOrUser.js")
+  assert(typeof requireAdminOrUser === "function", "requireAdminOrUser is a function")
+
   // ---- Route Import Tests ----
   console.log("\n── Route Imports ──")
   const routes = [
