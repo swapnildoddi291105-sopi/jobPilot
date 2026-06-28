@@ -10,6 +10,7 @@ const api = axios.create({
 
 // Attach the Supabase access token to every request
 api.interceptors.request.use(async (config) => {
+  if (!supabase) return config
   const {
     data: { session },
   } = await supabase.auth.getSession()
