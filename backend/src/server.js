@@ -90,7 +90,7 @@ app.use("/api/auth/register", authLimiter)
 app.use(
   cors({
     origin: isProduction
-      ? [process.env.CLIENT_URL, "https://jobpilot-uzxx.onrender.com"].filter(Boolean)
+      ? [process.env.CLIENT_URL, process.env.RENDER_EXTERNAL_URL].filter(Boolean)
       : process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   })
