@@ -24,6 +24,11 @@ import { supabaseAdmin } from "./config/supabase.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
+
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1)
+}
+
 const PORT = process.env.PORT || 5000
 const isProduction = process.env.NODE_ENV === "production"
 
