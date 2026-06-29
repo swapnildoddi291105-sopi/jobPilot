@@ -78,7 +78,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?select=user_id,title,location,experience,remote,max_jobs",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -150,7 +150,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?user_id=eq.{{ $('🔄 Loop Users').item.json.user_id }}&select=*",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?user_id=eq.{{ $('🔄 Loop Users').item.json.user_id }}&select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -173,7 +173,7 @@
             {
               "id": "url-1",
               "name": "linkedinUrl",
-              "value": "=https://www.linkedin.com/jobs/search/?keywords={{ encodeURIComponent($('⚙️ Load Prefs').item.json[0].title) }}&location={{ encodeURIComponent($('⚙️ Load Prefs').item.json[0].location) }}&f_TPR=r86400&sortBy=DD",
+              "value": "=https://www.linkedin.com/jobs/search/?keywords={{ encodeURIComponent($('⚙️ Load Prefs').item.json[0].target_roles[0]) }}&location={{ encodeURIComponent($('⚙️ Load Prefs').item.json[0].target_locations[0]) }}&f_TPR=r86400&sortBy=DD",
               "type": "string"
             },
             {
@@ -191,19 +191,19 @@
             {
               "id": "url-4",
               "name": "jobTitle",
-              "value": "={{ $('⚙️ Load Prefs').item.json[0].title }}",
+              "value": "={{ $('⚙️ Load Prefs').item.json[0].target_roles[0] }}",
               "type": "string"
             },
             {
               "id": "url-5",
               "name": "jobLocation",
-              "value": "={{ $('⚙️ Load Prefs').item.json[0].location }}",
+              "value": "={{ $('⚙️ Load Prefs').item.json[0].target_locations[0] }}",
               "type": "string"
             },
             {
               "id": "url-6",
               "name": "maxJobs",
-              "value": "={{ $('⚙️ Load Prefs').item.json[0].max_jobs || 10 }}",
+              "value": 10,
               "type": "number"
             }
           ]
