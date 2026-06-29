@@ -20,31 +20,31 @@
             {
               "id": "cfg-1",
               "name": "apiBase",
-              "value": "http://localhost:3001/api",
+              "value": "http://localhost:5000/api",
               "type": "string"
             },
             {
               "id": "cfg-2",
               "name": "adminToken",
-              "value": "REPLACE_YOUR_N8N_ADMIN_TOKEN",
+              "value": "={{ $env.N8N_ADMIN_TOKEN }}",
               "type": "string"
             },
             {
               "id": "cfg-3",
               "name": "supabaseUrl",
-              "value": "REPLACE_YOUR_SUPABASE_URL",
+              "value": "https://ahfxbqpiqgihciukhjfk.supabase.co",
               "type": "string"
             },
             {
               "id": "cfg-4",
               "name": "supabaseKey",
-              "value": "REPLACE_YOUR_SUPABASE_SERVICE_ROLE_KEY",
+              "value": "={{ $env.SUPABASE_SERVICE_KEY }}",
               "type": "string"
             },
             {
               "id": "cfg-5",
               "name": "apifyToken",
-              "value": "REPLACE_YOUR_APIFY_TOKEN",
+              "value": "={{ $env.APIFY_API_TOKEN }}",
               "type": "string"
             },
             {
