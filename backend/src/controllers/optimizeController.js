@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "../config/supabase.js"
 import { optimizeResume } from "../services/gemini.js"
 import { generateResumePDF } from "../utils/latex.js"
-import { getDrive, DRIVE_FOLDER_ID } from "../config/google.js"
+import { uploadFile, getPublicUrl } from "../config/storage.js"
 
 export async function optimizeJob(req, res) {
   const { jobId } = req.params
@@ -57,7 +57,7 @@ export async function optimizeJob(req, res) {
 
     console.log("[optimize] Generating PDF...")
     let pdfBuffer = null
-    let driveFile = null
+    let storagePath = null
     let pdfUrl = null
 
     try {
@@ -67,29 +67,13 @@ export async function optimizeJob(req, res) {
         userEmail
       )
 
-      if (pdfBuffer && getDrive() && DRIVE_FOLDER_ID) {
-        const { Readable } = await import("stream")
-        const stream = new Readable()
-        stream.push(pdfBuffer)
-        stream.push(null)
-
+      if (pdfBuffer) {
         const fileName = `optimized_${job.company}_${job.title}_${Date.now()}.pdf`
           .replace(/[^a-zA-Z0-9._-]/g, "_")
+        storagePath = `${userId}/optimized/${fileName}`
 
-        const drive = getDrive()
-        const uploadResult = await drive.files.create({
-          requestBody: {
-            name: fileName,
-            parents: [DRIVE_FOLDER_ID],
-          },
-          media: {
-            mimeType: "application/pdf",
-            body: stream,
-          },
-          fields: "id, webViewLink",
-        })
-        driveFile = uploadResult.data
-        pdfUrl = driveFile.webViewLink
+        await uploadFile(storagePath, pdfBuffer, "application/pdf")
+        pdfUrl = getPublicUrl(storagePath)
       }
     } catch (pdfErr) {
       console.warn("[optimize] PDF generation/upload failed (non-fatal):", pdfErr.message)
@@ -100,6 +84,7 @@ export async function optimizeJob(req, res) {
       .insert({
         job_id: jobId,
         user_id: userId,
+        storage_path: storagePath,
         resume_pdf_url: pdfUrl,
         ats_score: optimizedData.ats_score || null,
         missing_keywords: optimizedData.missing_keywords || [],

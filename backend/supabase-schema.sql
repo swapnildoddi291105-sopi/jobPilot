@@ -51,7 +51,7 @@ create index if not exists idx_jobs_status  on public.jobs(status);
 create index if not exists idx_jobs_date    on public.jobs(date_applied desc);
 
 -- =====================================================================
--- 3. RESUMES  (uploaded resumes + parsed data + Drive link)
+-- 3. RESUMES  (uploaded resumes + parsed data + storage link)
 -- =====================================================================
 create table if not exists public.resumes (
   id                     uuid primary key default gen_random_uuid(),
@@ -60,8 +60,8 @@ create table if not exists public.resumes (
   file_name              text not null,
   file_size              bigint,
   mime_type              text,
-  drive_file_id          text,
-  drive_web_view_link    text,
+  storage_path           text,
+  file_url               text,
   extracted_text         text,
   ats_score              integer,
   target_role            text,
@@ -130,6 +130,7 @@ create table if not exists public.optimized_resumes (
   id                uuid primary key default gen_random_uuid(),
   job_id            uuid not null references public.jobs(id) on delete cascade,
   user_id           uuid not null references auth.users(id) on delete cascade,
+  storage_path      text,
   resume_pdf_url    text,
   ats_score         integer,
   missing_keywords  jsonb default '[]'::jsonb,

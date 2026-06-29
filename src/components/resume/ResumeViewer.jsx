@@ -48,7 +48,13 @@ export function ResumeViewer({ resume, open, onClose }) {
               <HardDrive className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-muted-foreground text-xs">File</p>
-                <p className="font-medium">{resume.fileName}</p>
+                {resume.fileUrl ? (
+                  <a href={resume.fileUrl} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+                    {resume.fileName}
+                  </a>
+                ) : (
+                  <p className="font-medium">{resume.fileName}</p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
@@ -96,36 +102,45 @@ export function ResumeViewer({ resume, open, onClose }) {
 
           <Separator />
 
-          {/* Resume Preview (simulated document) */}
+          {/* Resume Preview */}
           <div>
             <h4 className="text-sm font-semibold mb-3">Preview</h4>
-            <div className="border rounded-lg p-6 bg-muted/30 space-y-3">
-              <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
-              <div className="h-3 w-1/2 bg-muted rounded animate-pulse" />
-              <div className="h-px bg-border my-4" />
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="h-3.5 w-1/3 bg-muted rounded animate-pulse" />
-                  <div className="h-3 w-full bg-muted/60 rounded animate-pulse" />
-                  <div className="h-3 w-5/6 bg-muted/60 rounded animate-pulse" />
-                </div>
-              ))}
-              <div className="h-px bg-border my-4" />
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="h-3.5 w-1/4 bg-muted rounded animate-pulse" />
-                  <div className="h-3 w-full bg-muted/60 rounded animate-pulse" />
-                  <div className="h-3 w-4/5 bg-muted/60 rounded animate-pulse" />
-                </div>
-              ))}
-            </div>
+            {resume.fileUrl && resume.mimeType === "application/pdf" ? (
+              <div className="border rounded-lg overflow-hidden h-[500px]">
+                <iframe
+                  src={resume.fileUrl}
+                  className="w-full h-full"
+                  title="Resume preview"
+                />
+              </div>
+            ) : resume.fileUrl ? (
+              <div className="border rounded-lg p-8 flex flex-col items-center justify-center gap-3 bg-muted/30">
+                <FileText className="h-12 w-12 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Preview not available for this file type
+                </p>
+                <Button variant="outline" size="sm" asChild>
+                  <a href={resume.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4 mr-1" />
+                    Open file
+                  </a>
+                </Button>
+              </div>
+            ) : (
+              <div className="border rounded-lg p-8 flex flex-col items-center justify-center gap-3 bg-muted/30">
+                <FileText className="h-12 w-12 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">File not available</p>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1" size="sm">
-              <Download className="h-4 w-4 mr-1" />
-              Download
+            <Button className="flex-1" size="sm" asChild>
+              <a href={resume.fileUrl} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4 mr-1" />
+                Download
+              </a>
             </Button>
             <Button variant="outline" size="sm" className="gap-1">
               <Share2 className="h-4 w-4 mr-1" />

@@ -3,7 +3,7 @@ import { supabaseAdmin } from "../config/supabase.js"
 import { requireAuth } from "../middleware/auth.js"
 import { asyncHandler } from "../middleware/errorHandler.js"
 import { upload } from "../middleware/upload.js"
-import { getDrive, getDriveError, DRIVE_FOLDER_ID } from "../config/google.js"
+import { uploadFile, getPublicUrl } from "../config/storage.js"
 import { extractResumeData } from "../config/gemini.js"
 import pdf from "pdf-parse"
 import mammoth from "mammoth"
@@ -81,30 +81,18 @@ router.post(
       }
     }
 
-    // ---- Step 3: upload original to Google Drive (best-effort) ----
-    let driveFileId = null
-    let driveWebViewLink = null
-    const drive = getDrive()
-    if (drive && DRIVE_FOLDER_ID) {
-      try {
-        const uploadResult = await drive.files.create({
-          requestBody: {
-            name: fileName,
-            parents: [DRIVE_FOLDER_ID],
-          },
-          media: {
-            mimeType: file.mimetype,
-            body: file.buffer,
-          },
-          fields: "id, webViewLink",
-        })
-        driveFileId = uploadResult.data.id
-        driveWebViewLink = uploadResult.data.webViewLink
-      } catch (err) {
-        console.warn("[upload] Drive upload failed:", err.message)
-      }
-    } else if (getDriveError()) {
-      console.warn("[upload] Drive not configured, skipping upload:", getDriveError().message)
+    // ---- Step 3: upload original file to Supabase Storage ----
+    let storagePath = null
+    let fileUrl = null
+    const fileExt = fileName.split(".").pop()
+    const safeName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${fileExt}`
+    const path = `${userId}/${safeName}`
+    try {
+      await uploadFile(path, file.buffer, file.mimetype)
+      storagePath = path
+      fileUrl = getPublicUrl(path)
+    } catch (err) {
+      console.warn("[upload] Supabase Storage upload failed:", err.message)
     }
 
     // ---- Step 4: insert resume row ----
@@ -116,8 +104,8 @@ router.post(
       file_name: fileName,
       file_size: file.size,
       mime_type: file.mimetype,
-      drive_file_id: driveFileId,
-      drive_web_view_link: driveWebViewLink,
+      storage_path: storagePath,
+      file_url: fileUrl,
       extracted_text: extractedText.slice(0, 10000),
       ats_score: null, // could be computed later
       target_role: geminiData.current_role || null,
@@ -142,7 +130,7 @@ router.post(
       resume: data,
       extracted: geminiData,
       warnings: {
-        drive: !driveFileId ? "File not uploaded to Drive (check config)" : null,
+        storage: !storagePath ? "File not uploaded to storage" : null,
         gemini: !geminiData.summary ? "AI extraction skipped or failed" : null,
       },
     })

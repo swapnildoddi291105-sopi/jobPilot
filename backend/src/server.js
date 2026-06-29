@@ -21,6 +21,7 @@ import coverLetterRoutes from "./routes/coverLetter.js"
 import adminRoutes from "./routes/admin.js"
 import { errorHandler } from "./middleware/errorHandler.js"
 import { supabaseAdmin } from "./config/supabase.js"
+import { ensureBucket } from "./config/storage.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -144,6 +145,9 @@ app.use((req, res) => {
 
 // ---- Error handler (must be last) ----
 app.use(errorHandler)
+
+// ---- Init Supabase Storage bucket ----
+ensureBucket()
 
 app.listen(PORT, () => {
   console.log(`\n🚀 JobPilot backend running on http://localhost:${PORT}`)

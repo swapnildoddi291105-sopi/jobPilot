@@ -3,7 +3,7 @@ import { supabaseAdmin } from "../config/supabase.js"
 import { requireAdminOrUser } from "../middleware/requireAdminOrUser.js"
 import { asyncHandler } from "../middleware/errorHandler.js"
 import { sendEmail } from "../services/gmail.js"
-import { getDrive } from "../config/google.js"
+import { downloadFile } from "../config/storage.js"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -57,22 +57,20 @@ router.post(
       }
 
       try {
-        const drive = getDrive()
-        const urlParts = (opt.resume_pdf_url || "").split("/")
-        const fileId = urlParts.length >= 2 ? urlParts[urlParts.length - 2] : ""
-        if (!drive) {
-          console.warn("[email] Drive client not available")
-        } else {
-          const response = await drive.files.get(
-            { fileId, alt: "media" },
-            { responseType: "arraybuffer" }
-          )
-          attachmentBuffer = Buffer.from(response.data)
+        if (opt.storage_path) {
+          attachmentBuffer = await downloadFile(opt.storage_path)
+        } else if (opt.resume_pdf_url) {
+          const response = await fetch(opt.resume_pdf_url)
+          if (response.ok) {
+            attachmentBuffer = Buffer.from(await response.arrayBuffer())
+          }
+        }
+        if (attachmentBuffer) {
           attachmentName = `Optimized_Resume_${opt.jobs?.company || ""}_${opt.jobs?.title || ""}.pdf`
             .replace(/[^a-zA-Z0-9._-]/g, "_")
         }
       } catch (err) {
-        console.warn("[email] Could not download PDF from Drive:", err.message)
+        console.warn("[email] Could not download PDF:", err.message)
       }
     }
 

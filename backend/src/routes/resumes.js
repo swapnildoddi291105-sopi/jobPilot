@@ -2,6 +2,7 @@ import { Router } from "express"
 import { supabaseAdmin } from "../config/supabase.js"
 import { requireAuth } from "../middleware/auth.js"
 import { asyncHandler } from "../middleware/errorHandler.js"
+import { deleteFile } from "../config/storage.js"
 
 const router = Router()
 
@@ -96,12 +97,19 @@ router.patch(
 )
 
 /**
- * DELETE /api/resumes/:id — removes DB row. Drive file is left in place.
+ * DELETE /api/resumes/:id — removes DB row + storage file
  */
 router.delete(
   "/:id",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { data: resume } = await supabaseAdmin
+      .from("resumes")
+      .select("storage_path")
+      .eq("id", req.params.id)
+      .eq("user_id", req.user.id)
+      .single()
+
     const { error } = await supabaseAdmin
       .from("resumes")
       .delete()
@@ -110,6 +118,10 @@ router.delete(
 
     if (error) {
       return res.status(500).json({ error: error.message })
+    }
+
+    if (resume?.storage_path) {
+      deleteFile(resume.storage_path)
     }
 
     res.json({ message: "Resume deleted" })
