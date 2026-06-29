@@ -1,0 +1,639 @@
+{
+  "name": "JobPilot — Daily Job Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "triggerAtHour": 7 }]
+        }
+      },
+      "id": "node-schedule",
+      "name": "⏰ Daily 7AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-1",
+              "name": "apiBase",
+              "value": "http://localhost:3001/api",
+              "type": "string"
+            },
+            {
+              "id": "cfg-2",
+              "name": "adminToken",
+              "value": "REPLACE_YOUR_N8N_ADMIN_TOKEN",
+              "type": "string"
+            },
+            {
+              "id": "cfg-3",
+              "name": "supabaseUrl",
+              "value": "REPLACE_YOUR_SUPABASE_URL",
+              "type": "string"
+            },
+            {
+              "id": "cfg-4",
+              "name": "supabaseKey",
+              "value": "REPLACE_YOUR_SUPABASE_SERVICE_ROLE_KEY",
+              "type": "string"
+            },
+            {
+              "id": "cfg-5",
+              "name": "apifyToken",
+              "value": "REPLACE_YOUR_APIFY_TOKEN",
+              "type": "string"
+            },
+            {
+              "id": "cfg-6",
+              "name": "apifyActorId",
+              "value": "curious_coder~linkedin-jobs-scraper",
+              "type": "string"
+            },
+            {
+              "id": "cfg-7",
+              "name": "geminiKey",
+              "value": "REPLACE_YOUR_GEMINI_API_KEY",
+              "type": "string"
+            },
+            {
+              "id": "cfg-8",
+              "name": "optimizeLimit",
+              "value": 5,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-config",
+      "name": "⚙️ Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?select=user_id,title,location,experience,remote,max_jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" }
+          ]
+        },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "id": "node-getusers",
+      "name": "📋 Get All Users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [680, 400]
+    },
+    {
+      "parameters": { "batchSize": 1, "options": {} },
+      "id": "node-loopusers",
+      "name": "🔄 Loop Users",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [920, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/resumes?user_id=eq.{{ $('🔄 Loop Users').item.json.user_id }}&order=created_at.desc&limit=1&select=id,storage_path,file_url,extracted_text,file_name",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" }
+          ]
+        },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "id": "node-loadresume",
+      "name": "📄 Load Resume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1160, 280]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const resume = $input.item.json;\nif (!resume || !resume[0] || !resume[0].extracted_text) {\n  return [{ json: { skip: true, reason: 'No resume found', user_id: $('🔄 Loop Users').item.json.user_id } }];\n}\nreturn [{ json: { hasResume: true, resumeId: resume[0].id, resumeText: resume[0].extracted_text, fileUrl: resume[0].file_url, storagePath: resume[0].storage_path, user_id: $('🔄 Loop Users').item.json.user_id } }];"
+      },
+      "id": "node-checkresume",
+      "name": "✅ Has Resume?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [{ "id": "cond-1", "leftValue": "={{ $json.hasResume }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-ifresumecheck",
+      "name": "❓ Resume Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1600, 280]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?user_id=eq.{{ $('🔄 Loop Users').item.json.user_id }}&select=*",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" }
+          ]
+        },
+        "options": { "response": { "response": { "responseFormat": "json" } } }
+      },
+      "id": "node-loadprefs",
+      "name": "⚙️ Load Prefs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1840, 280]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "url-1",
+              "name": "linkedinUrl",
+              "value": "=https://www.linkedin.com/jobs/search/?keywords={{ encodeURIComponent($('⚙️ Load Prefs').item.json[0].title) }}&location={{ encodeURIComponent($('⚙️ Load Prefs').item.json[0].location) }}&f_TPR=r86400&sortBy=DD",
+              "type": "string"
+            },
+            {
+              "id": "url-2",
+              "name": "userId",
+              "value": "={{ $('🔄 Loop Users').item.json.user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "url-3",
+              "name": "resumeText",
+              "value": "={{ $('✅ Has Resume?').item.json.resumeText }}",
+              "type": "string"
+            },
+            {
+              "id": "url-4",
+              "name": "jobTitle",
+              "value": "={{ $('⚙️ Load Prefs').item.json[0].title }}",
+              "type": "string"
+            },
+            {
+              "id": "url-5",
+              "name": "jobLocation",
+              "value": "={{ $('⚙️ Load Prefs').item.json[0].location }}",
+              "type": "string"
+            },
+            {
+              "id": "url-6",
+              "name": "maxJobs",
+              "value": "={{ $('⚙️ Load Prefs').item.json[0].max_jobs || 10 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-buildurl",
+      "name": "🔗 Build Search Params",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2080, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/{{ $('⚙️ Config').first().json.apifyActorId }}/runs?token={{ $('⚙️ Config').first().json.apifyToken }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"urls\": [\"{{ $json.linkedinUrl }}\"], \"scrapeCompany\": false, \"count\": {{ $json.maxJobs }} }",
+        "options": { "timeout": 300000 }
+      },
+      "id": "node-apifytrigger",
+      "name": "🚀 Trigger Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2320, 280]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/acts/{{ $('⚙️ Config').first().json.apifyActorId }}/runs/{{ $('🚀 Trigger Apify').first().json.data.id }}?token={{ $('⚙️ Config').first().json.apifyToken }}",
+        "options": {}
+      },
+      "id": "node-apifystatus",
+      "name": "🔍 Check Apify Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2560, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3 },
+          "conditions": [{ "id": "cond-apify", "leftValue": "={{ $json.data.status }}", "rightValue": "SUCCEEDED", "operator": { "type": "string", "operation": "equals" } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-apifydone",
+      "name": "✅ Apify Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [2800, 280]
+    },
+    {
+      "parameters": { "amount": 10 },
+      "id": "node-wait10",
+      "name": "⏱️ Wait 10s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2960, 160],
+      "webhookId": "wait-webhook-id-replace"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $('🚀 Trigger Apify').first().json.data.defaultDatasetId }}/items?token={{ $('⚙️ Config').first().json.apifyToken }}",
+        "options": {}
+      },
+      "id": "node-apifyfetch",
+      "name": "📥 Fetch Apify Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [3040, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.all();\nconst jobs = [];\nconst seen = new Set();\n\nfunction stripHtml(html) {\n  if (!html) return '';\n  return html\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/?(li|p|div|h[1-6])[^>]*>/gi, '\\n')\n    .replace(/<[^>]+>/g, '')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n}\n\nfor (const item of results) {\n  const j = item.json;\n  const jobLink = j.link || j.jobUrl || j.url || '';\n  if (seen.has(jobLink) || !jobLink) continue;\n\n  const postedAt = j.postedAt || '';\n  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);\n  if (postedAt && postedAt < sevenDaysAgo) continue;\n\n  const jobDescription = j.descriptionHtml\n    ? stripHtml(j.descriptionHtml)\n    : (j.descriptionText || '');\n  if (!jobDescription || jobDescription.length < 50) continue;\n\n  jobs.push({\n    title:          j.title       || 'No Title',\n    company:        j.companyName || 'Unknown Company',\n    location:       j.location    || 'Unknown',\n    postedAt,\n    employmentType: j.employmentType || '',\n    seniorityLevel: j.seniorityLevel || '',\n    jobLink,\n    jobDescription\n  });\n\n  seen.add(jobLink);\n  if (jobs.length >= 20) break;\n}\n\nreturn jobs.map(job => ({ json: job }));"
+      },
+      "id": "node-parsejobs",
+      "name": "🧹 Parse & Dedup Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3280, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allJobs = $input.all();\nconst config = $('⚙️ Config').first().json;\nconst supabaseUrl = config.supabaseUrl;\nconst supabaseKey = config.supabaseKey;\n\nasync function jobExists(jobUrl) {\n  try {\n    const r = await fetch(\n      `${supabaseUrl}/rest/v1/jobs?apply_link=eq.${encodeURIComponent(jobUrl)}&select=id`,\n      { headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` } }\n    );\n    const data = await r.json();\n    return data.length > 0;\n  } catch { return false; }\n}\n\nconst checks = await Promise.all(allJobs.map(j => jobExists(j.json.jobLink)));\nconst newJobs = allJobs.filter((_, i) => !checks[i]);\n\nreturn newJobs.slice(0, 10);"
+      },
+      "id": "node-filterdupes",
+      "name": "🔁 Filter Duplicates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3520, 280]
+    },
+    {
+      "parameters": { "maxItems": 5 },
+      "id": "node-limit5",
+      "name": "🏆 Limit to 5 Jobs",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [3760, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/jobs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\":     \"{{ $('🔗 Build Search Params').item.json.userId }}\",\n  \"title\":       \"{{ $json.title }}\",\n  \"company\":     \"{{ $json.company }}\",\n  \"description\": \"{{ $json.jobDescription.substring(0, 3000) }}\",\n  \"apply_link\":  \"{{ $json.jobLink }}\",\n  \"location\":    \"{{ $json.location }}\",\n  \"status\":      \"new\",\n  \"source\":      \"linkedin\"\n}",
+        "options": {}
+      },
+      "id": "node-savejob",
+      "name": "💾 Save Job to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [4000, 280]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const saved = $json;\nconst orig  = $('🏆 Limit to 5 Jobs').item.json;\nreturn [{ json: {\n  jobId:          saved[0]?.id || saved.id || '',\n  title:          orig.title,\n  company:        orig.company,\n  jobLink:        orig.jobLink,\n  jobDescription: orig.jobDescription,\n  postedAt:       orig.postedAt,\n  location:       orig.location,\n  resumeText:     $('🔗 Build Search Params').item.json.resumeText,\n  userId:         $('🔗 Build Search Params').item.json.userId\n} }];"
+      },
+      "id": "node-mergedata",
+      "name": "🔀 Merge Job + Resume",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4240, 280]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=My current resume:\n{{ $json.resumeText }}\n\nTarget job description:\nCompany: {{ $json.company }}\nRole: {{ $json.title }}\nLocation: {{ $json.location }}\nDescription: {{ $json.jobDescription.substring(0, 3000) }}",
+        "options": {
+          "systemMessage": "You are an expert ATS resume optimizer for JobPilot.\n\nYour task is to rewrite the resume so it is perfectly optimized for the target job.\n\nSTRICT RULES:\n- NEVER invent fake experience, companies, dates or metrics\n- ONLY improve how existing experience is described\n- Match keywords from the job description naturally\n- Use strong action verbs (Led, Built, Optimized, Delivered, Drove)\n- Keep to 2 pages max\n\nFinal Output (STRICT format — follow exactly):\nReturn ONLY plain text. No Markdown. No asterisks. No ### headers.\n\nUse ONLY these section headers (ALL CAPS, on their own line):\nNAME\nCONTACT\nSUMMARY\nPROFESSIONAL EXPERIENCE\nEDUCATION\nSKILLS\n\nSeparate sections with one blank line.\nFor bullets use: - (hyphen + space)\nFor job entries:\nCOMPANY | LOCATION\nTITLE | DATES\n- bullet\n- bullet"
+        }
+      },
+      "id": "node-atsagent",
+      "name": "🤖 ATS Optimizer (Gemini)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [4480, 280]
+    },
+    {
+      "parameters": { "options": {} },
+      "id": "node-geminimodel",
+      "name": "🧠 Gemini Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [4480, 440],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = ($json.output ?? '').trim();\n\nfunction esc(s) {\n  return String(s ?? '')\n    .replace(/\\\\/g, '\\\\textbackslash{}')\n    .replace(/&/g, '\\\\&')\n    .replace(/%/g, '\\\\%')\n    .replace(/\\$/g, '\\\\$')\n    .replace(/#/g, '\\\\#')\n    .replace(/_/g, '\\\\_')\n    .replace(/\\{/g, '\\\\{')\n    .replace(/\\}/g, '\\\\}')\n    .replace(/~/g, '\\\\textasciitilde{}')\n    .replace(/\\^/g, '\\\\textasciicircum{}');\n}\n\nfunction section(text, header) {\n  const re = new RegExp('(?:^|\\\\n)' + header.replace(/ /g, '\\\\s+') + '\\\\s*\\\\n([\\\\s\\\\S]*?)(?=\\\\n[A-Z][A-Z ]{2,}\\\\s*\\\\n|$)', 'i');\n  const m = text.match(re);\n  return m ? m[1].trim() : '';\n}\n\nconst nameRaw       = section(raw, 'NAME');\nconst contactRaw    = section(raw, 'CONTACT');\nconst summaryRaw    = section(raw, 'SUMMARY');\nconst experienceRaw = section(raw, 'PROFESSIONAL EXPERIENCE');\nconst educationRaw  = section(raw, 'EDUCATION');\nconst skillsRaw     = section(raw, 'SKILLS');\n\nconst fullName  = (nameRaw.split('\\n')[0] || 'Candidate').trim();\nconst parts     = fullName.split(' ');\nconst firstName = esc(parts.length > 1 ? parts.slice(0, -1).join(' ') : fullName);\nconst lastName  = esc(parts.length > 1 ? parts[parts.length - 1] : '');\n\nconst tokens    = contactRaw.replace(/\\n/g, ' | ').split('|').map(s => s.trim()).filter(Boolean);\nconst email     = esc(tokens.find(p => p.includes('@')) ?? '');\nconst phone     = esc(tokens.find(p => /\\d{3}[-.\\s]\\d{3}/.test(p)) ?? '');\nconst liRaw     = tokens.find(p => /linkedin/i.test(p)) ?? '';\nconst linkedin  = esc(liRaw.replace(/^https?:\\/\\//i, '').replace(/^www\\./i, '').replace(/^linkedin\\.com\\/in\\//i, '').replace(/\\/+$/, ''));\nconst city      = esc(tokens.find(p => !p.includes('@') && !/\\d{3}[-.\\s]\\d{3}/.test(p) && !/linkedin/i.test(p)) ?? '');\nconst summary   = esc(summaryRaw.replace(/\\n/g, ' ').trim());\n\nfunction buildExp(text) {\n  if (!text) return '\\\\cvitem{}{}';\n  const lines = text.split('\\n');\n  const blocks = [];\n  let cur = [];\n  for (const l of lines) {\n    const t = l.trim();\n    if (!t) continue;\n    if (t.includes('|') && !t.startsWith('-') && cur.length) { blocks.push(cur); cur = []; }\n    cur.push(t);\n  }\n  if (cur.length) blocks.push(cur);\n  return blocks.map(b => {\n    const [co, loc]     = (b[0]||'').split('|').map(s => s.trim());\n    const [ti, dates]   = (b[1]||'').split('|').map(s => s.trim());\n    const bullets       = b.slice(2).filter(l => l.startsWith('- '));\n    let out = `\\n\\\\cventry{${esc(dates)}}{${esc(ti)}}{${esc(co)}}{${esc(loc)}}{}{\n`;\n    if (bullets.length) {\n      out += '  \\\\begin{itemize}\\n' + bullets.map(b => `    \\\\item ${esc(b.replace(/^-\\s+/,''))}`).join('\\n') + '\\n  \\\\end{itemize}\\n';\n    }\n    return out + '}';\n  }).join('\\n') || '\\\\cvitem{}{}';\n}\n\nfunction buildEdu(text) {\n  if (!text) return '\\\\cvitem{}{}';\n  const lines = text.split('\\n').map(l => l.trim()).filter(l => l && !l.startsWith('-'));\n  let out = '';\n  for (let i = 0; i + 1 < lines.length; i += 2) {\n    const [sch, loc] = lines[i].split('|').map(s => s.trim());\n    const [deg, dt]  = lines[i+1].split('|').map(s => s.trim());\n    out += `\\\\cventry{${esc(dt)}}{${esc(deg)}}{${esc(sch)}}{${esc(loc)}}{}{}\\n`;\n  }\n  return out || '\\\\cvitem{}{}';\n}\n\nfunction buildSkills(text) {\n  if (!text) return '\\\\cvitem{}{}';\n  return text.split('\\n').map(l => l.trim()).filter(Boolean).map(l => {\n    const clean = l.replace(/^-\\s*/,'');\n    const ci = clean.indexOf(':');\n    return ci > 0\n      ? `\\\\cvitem{${esc(clean.slice(0,ci).trim())}}{${esc(clean.slice(ci+1).trim())}}`\n      : `\\\\cvitem{}{${esc(clean)}}`;\n  }).join('\\n');\n}\n\nconst latex = `\\\\documentclass[11pt,a4paper,sans]{moderncv}\n\\\\moderncvstyle{banking}\n\\\\moderncvcolor{blue}\n\\\\usepackage[scale=0.88]{geometry}\n\\\\nopagenumbers{}\n\n\\\\name{${firstName}}{${lastName}}\n\\\\phone[mobile]{${phone}}\n\\\\email{${email}}\n\\\\social[linkedin]{${linkedin}}\n\\\\address{${city}}{}{}\n\n\\\\begin{document}\n\\\\makecvtitle\n\n\\\\section{Summary}\n\\\\cvitem{}{${summary}}\n\n\\\\section{Professional Experience}\n${buildExp(experienceRaw)}\n\n\\\\section{Education}\n${buildEdu(educationRaw)}\n\n\\\\section{Skills}\n${buildSkills(skillsRaw)}\n\n\\\\end{document}\n`;\n\nconst src = $('🔀 Merge Job + Resume').item.json;\nreturn [{ json: { latex, output: $json.output, company: src.company, title: src.title, jobLink: src.jobLink, jobId: src.jobId, userId: src.userId, postedAt: src.postedAt } }];"
+      },
+      "id": "node-buildlatex",
+      "name": "📝 Build LaTeX Resume",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4720, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://latex.ytotech.com/builds/sync",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ compiler: 'lualatex', resources: [{ main: true, content: $json.latex }] }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "pdfData"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "node-compilepdf",
+      "name": "🖨️ Compile PDF (LaTeX API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [4960, 280]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const src = $('📝 Build LaTeX Resume').item.json;\nconst safe = s => (s||'').replace(/[\\/\\\\:*?\"<>|]/g,'').slice(0,60);\nconst docTitle = `${safe(src.title)}_${safe(src.company)}_${(src.postedAt||new Date().toISOString()).slice(0,10)}`;\nreturn [{ json: { docTitle, company: src.company, title: src.title, jobLink: src.jobLink, jobId: src.jobId, userId: src.userId, postedAt: src.postedAt, output: src.output }, binary: { data: $input.item.binary.pdfData } }];"
+      },
+      "id": "node-pdfmeta",
+      "name": "🏷️ Prep PDF Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5200, 280]
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.docTitle }}.pdf",
+        "driveId": { "__rl": true, "value": "My Drive", "mode": "list" },
+        "folderId": { "__rl": true, "mode": "list", "value": "root" },
+        "options": {}
+      },
+      "id": "node-uploaddrive",
+      "name": "☁️ Upload PDF to Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [5440, 280],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": { "__rl": true, "value": "={{ $json.id }}", "mode": "id" },
+        "permissionsUi": {
+          "permissionsValues": { "role": "reader", "type": "anyone" }
+        },
+        "options": {}
+      },
+      "id": "node-sharepdf",
+      "name": "🔓 Share PDF (Public Link)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [5680, 280],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_YOUR_GOOGLE_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const pdfId       = $json.id ?? '';\nconst pdfLink     = pdfId ? `https://drive.google.com/file/d/${pdfId}/view` : '';\nconst pdfDownload = pdfId ? `https://drive.google.com/uc?export=download&id=${pdfId}` : '';\nconst meta        = $('🏷️ Prep PDF Metadata').item.json;\n\nreturn [{ json: {\n  pdfId, pdfLink, pdfDownload,\n  jobId:    meta.jobId,\n  userId:   meta.userId,\n  title:    meta.title,\n  company:  meta.company,\n  jobLink:  meta.jobLink,\n  postedAt: meta.postedAt\n} }];"
+      },
+      "id": "node-extractpdflink",
+      "name": "🔗 Extract PDF Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5920, 280]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/optimized_resumes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"job_id\":          \"{{ $json.jobId }}\",\n  \"user_id\":         \"{{ $json.userId }}\",\n  \"resume_pdf_url\":  \"{{ $json.pdfLink }}\",\n  \"ats_score\":       85,\n  \"missing_keywords\": []\n}",
+        "options": {}
+      },
+      "id": "node-saveoptimized",
+      "name": "💾 Save Optimized Resume",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [6160, 280]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/jobs?id=eq.{{ $('🔗 Extract PDF Link').item.json.jobId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"status\": \"optimized\" }",
+        "options": {}
+      },
+      "id": "node-updatejobstatus",
+      "name": "✅ Update Job Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [6400, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items       = $('🔗 Extract PDF Link').all();\nconst today       = new Date().toISOString().slice(0, 10);\nconst esc         = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n\nlet rows = items.map(item => {\n  const j = item.json;\n  return `<tr>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;font-weight:700;\">${esc(j.company)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\">${esc(j.title)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\">${esc(j.postedAt)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\"><a href=\"${j.jobLink}\">🔗 Apply</a></td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\"><a href=\"${j.pdfLink}\">📄 Resume PDF</a></td>\n  </tr>`;\n}).join('');\n\nconst html = `<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#222;\">\n  <h2 style=\"color:#2563EB;\">🚀 JobPilot Daily Report — ${today}</h2>\n  <p>Your AI-optimized resumes are ready. <strong>${items.length} new jobs</strong> found today.</p>\n  <table style=\"border-collapse:collapse;width:100%;\">\n    <thead><tr style=\"background:#f5f5f5;\">\n      <th style=\"padding:10px;text-align:left;\">Company</th>\n      <th style=\"padding:10px;text-align:left;\">Role</th>\n      <th style=\"padding:10px;text-align:left;\">Posted</th>\n      <th style=\"padding:10px;text-align:left;\">Job Link</th>\n      <th style=\"padding:10px;text-align:left;\">Optimized Resume</th>\n    </tr></thead>\n    <tbody>${rows}</tbody>\n  </table>\n  <p style=\"color:#aaa;font-size:11px;margin-top:20px;\">Sent by JobPilot AI — ${today}</p>\n</div>`;\n\nreturn [{ json: { subject: `🎯 JobPilot: ${items.length} New Jobs + Resumes Ready — ${today}`, body: html } }];"
+      },
+      "id": "node-buildemail",
+      "name": "📧 Build Email Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [6640, 280]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('⚙️ Load Prefs').first().json[0].notification_email || 'REPLACE_YOUR_EMAIL' }}",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}",
+        "options": { "appendAttribution": false }
+      },
+      "id": "node-sendemail",
+      "name": "📨 Send Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [6880, 280],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_YOUR_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/workflow_logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\":       \"{{ $('🔄 Loop Users').item.json.user_id }}\",\n  \"workflow_name\": \"daily_job_automation\",\n  \"step\":          \"complete\",\n  \"status\":        \"success\",\n  \"message\":       \"Daily automation completed\",\n  \"meta\":          { \"timestamp\": \"{{ $now }}\", \"jobsProcessed\": 5 }\n}",
+        "options": {}
+      },
+      "id": "node-logrun",
+      "name": "📊 Log Workflow Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [7120, 280]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/jobs?select=status&user_id=eq.{{ $('🔄 Loop Users').item.json.user_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $('⚙️ Config').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ Config').first().json.supabaseKey }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-updatedash",
+      "name": "📈 Update Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [920, 560]
+    }
+  ],
+  "connections": {
+    "⏰ Daily 7AM Trigger":    { "main": [[{ "node": "⚙️ Config",              "type": "main", "index": 0 }]] },
+    "⚙️ Config":               { "main": [[{ "node": "📋 Get All Users",        "type": "main", "index": 0 }]] },
+    "📋 Get All Users":        { "main": [[{ "node": "🔄 Loop Users",           "type": "main", "index": 0 }]] },
+    "🔄 Loop Users": {
+      "main": [
+        [{ "node": "📄 Load Resume",    "type": "main", "index": 0 }],
+        [{ "node": "📈 Update Dashboard","type": "main", "index": 0 }]
+      ]
+    },
+    "📄 Load Resume":          { "main": [[{ "node": "✅ Has Resume?",          "type": "main", "index": 0 }]] },
+    "✅ Has Resume?":          { "main": [[{ "node": "❓ Resume Exists?",        "type": "main", "index": 0 }]] },
+    "❓ Resume Exists?": {
+      "main": [
+        [{ "node": "⚙️ Load Prefs",    "type": "main", "index": 0 }],
+        [{ "node": "📊 Log Workflow Run","type": "main", "index": 0 }]
+      ]
+    },
+    "⚙️ Load Prefs":           { "main": [[{ "node": "🔗 Build Search Params",  "type": "main", "index": 0 }]] },
+    "🔗 Build Search Params":  { "main": [[{ "node": "🚀 Trigger Apify",        "type": "main", "index": 0 }]] },
+    "🚀 Trigger Apify":        { "main": [[{ "node": "🔍 Check Apify Status",   "type": "main", "index": 0 }]] },
+    "🔍 Check Apify Status":   { "main": [[{ "node": "✅ Apify Done?",          "type": "main", "index": 0 }]] },
+    "✅ Apify Done?": {
+      "main": [
+        [{ "node": "📥 Fetch Apify Results", "type": "main", "index": 0 }],
+        [{ "node": "⏱️ Wait 10s",             "type": "main", "index": 0 }]
+      ]
+    },
+    "⏱️ Wait 10s":             { "main": [[{ "node": "🔍 Check Apify Status",   "type": "main", "index": 0 }]] },
+    "📥 Fetch Apify Results":  { "main": [[{ "node": "🧹 Parse & Dedup Jobs",   "type": "main", "index": 0 }]] },
+    "🧹 Parse & Dedup Jobs":   { "main": [[{ "node": "🔁 Filter Duplicates",    "type": "main", "index": 0 }]] },
+    "🔁 Filter Duplicates":    { "main": [[{ "node": "🏆 Limit to 5 Jobs",      "type": "main", "index": 0 }]] },
+    "🏆 Limit to 5 Jobs":      { "main": [[{ "node": "💾 Save Job to DB",       "type": "main", "index": 0 }]] },
+    "💾 Save Job to DB":       { "main": [[{ "node": "🔀 Merge Job + Resume",   "type": "main", "index": 0 }]] },
+    "🔀 Merge Job + Resume":   { "main": [[{ "node": "🤖 ATS Optimizer (Gemini)","type": "main", "index": 0 }]] },
+    "🧠 Gemini Model":         { "ai_languageModel": [[{ "node": "🤖 ATS Optimizer (Gemini)", "type": "ai_languageModel", "index": 0 }]] },
+    "🤖 ATS Optimizer (Gemini)":{ "main": [[{ "node": "📝 Build LaTeX Resume",  "type": "main", "index": 0 }]] },
+    "📝 Build LaTeX Resume":   { "main": [[{ "node": "🖨️ Compile PDF (LaTeX API)","type": "main", "index": 0 }]] },
+    "🖨️ Compile PDF (LaTeX API)":{ "main": [[{ "node": "🏷️ Prep PDF Metadata", "type": "main", "index": 0 }]] },
+    "🏷️ Prep PDF Metadata":    { "main": [[{ "node": "☁️ Upload PDF to Drive",  "type": "main", "index": 0 }]] },
+    "☁️ Upload PDF to Drive":  { "main": [[{ "node": "🔓 Share PDF (Public Link)","type": "main", "index": 0 }]] },
+    "🔓 Share PDF (Public Link)":{ "main": [[{ "node": "🔗 Extract PDF Link",   "type": "main", "index": 0 }]] },
+    "🔗 Extract PDF Link":     { "main": [[{ "node": "💾 Save Optimized Resume","type": "main", "index": 0 }]] },
+    "💾 Save Optimized Resume":{ "main": [[{ "node": "✅ Update Job Status",    "type": "main", "index": 0 }]] },
+    "✅ Update Job Status":    { "main": [[{ "node": "📧 Build Email Summary",  "type": "main", "index": 0 }]] },
+    "📧 Build Email Summary":  { "main": [[{ "node": "📨 Send Gmail",           "type": "main", "index": 0 }]] },
+    "📨 Send Gmail":           { "main": [[{ "node": "📊 Log Workflow Run",     "type": "main", "index": 0 }]] },
+    "📊 Log Workflow Run":     { "main": [[{ "node": "🔄 Loop Users",           "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "REPLACE_WITH_YOUR_INSTANCE_ID" }
+}
