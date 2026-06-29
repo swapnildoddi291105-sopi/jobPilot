@@ -142,6 +142,7 @@ create table if not exists public.user_settings (
   job_types text[] default '{"Full-time"}',
   sources text[] default '{"LinkedIn", "Indeed"}',
   auto_apply boolean default false,
+  email text,
   follow_up_reminders boolean default true,
   email_notifications boolean default true,
   browser_notifications boolean default false,

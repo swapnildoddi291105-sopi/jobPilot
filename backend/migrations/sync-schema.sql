@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
   job_types            JSONB DEFAULT '["Full-time"]'::jsonb,
   sources              JSONB DEFAULT '["LinkedIn", "Indeed"]'::jsonb,
   auto_apply           BOOLEAN DEFAULT false,
+  email                TEXT,
   follow_up_reminders  BOOLEAN DEFAULT true,
   email_notifications  BOOLEAN DEFAULT true,
   browser_notifications BOOLEAN DEFAULT false,

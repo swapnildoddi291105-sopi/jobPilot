@@ -78,7 +78,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/user_settings?select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/user_settings?select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources,auto_apply,profiles(email,full_name)",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -320,7 +320,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"user_id\":     \"{{ $('🔗 Build Search Params').item.json.userId }}\",\n  \"title\":       \"{{ $json.title }}\",\n  \"company\":     \"{{ $json.company }}\",\n  \"description\": \"{{ $json.jobDescription.substring(0, 3000) }}\",\n  \"apply_link\":  \"{{ $json.jobLink }}\",\n  \"location\":    \"{{ $json.location }}\",\n  \"status\":      \"new\",\n  \"source\":      \"linkedin\"\n}",
+        "jsonBody": "={\n  \"user_id\":     \"{{ $('🔗 Build Search Params').item.json.userId }}\",\n  \"title\":       \"{{ $json.title }}\",\n  \"company\":     \"{{ $json.company }}\",\n  \"description\": \"{{ $json.jobDescription.substring(0, 3000) }}\",\n  \"apply_link\":  \"{{ $json.jobLink }}\",\n  \"location\":    \"{{ $json.location }}\",\n  \"status\":      \"Saved\",\n  \"source\":      \"linkedin\"\n}",
         "options": {}
       },
       "id": "node-savejob",
@@ -503,7 +503,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={ \"status\": \"optimized\" }",
+        "jsonBody": "={ \"status\": \"Optimized\" }",
         "options": {}
       },
       "id": "node-updatejobstatus",
@@ -514,7 +514,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items       = $('🔗 Extract PDF Link').all();\nconst today       = new Date().toISOString().slice(0, 10);\nconst esc         = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n\nlet rows = items.map(item => {\n  const j = item.json;\n  return `<tr>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;font-weight:700;\">${esc(j.company)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\">${esc(j.title)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\">${esc(j.postedAt)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\"><a href=\"${j.jobLink}\">🔗 Apply</a></td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\"><a href=\"${j.pdfLink}\">📄 Resume PDF</a></td>\n  </tr>`;\n}).join('');\n\nconst html = `<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#222;\">\n  <h2 style=\"color:#2563EB;\">🚀 JobPilot Daily Report — ${today}</h2>\n  <p>Your AI-optimized resumes are ready. <strong>${items.length} new jobs</strong> found today.</p>\n  <table style=\"border-collapse:collapse;width:100%;\">\n    <thead><tr style=\"background:#f5f5f5;\">\n      <th style=\"padding:10px;text-align:left;\">Company</th>\n      <th style=\"padding:10px;text-align:left;\">Role</th>\n      <th style=\"padding:10px;text-align:left;\">Posted</th>\n      <th style=\"padding:10px;text-align:left;\">Job Link</th>\n      <th style=\"padding:10px;text-align:left;\">Optimized Resume</th>\n    </tr></thead>\n    <tbody>${rows}</tbody>\n  </table>\n  <p style=\"color:#aaa;font-size:11px;margin-top:20px;\">Sent by JobPilot AI — ${today}</p>\n</div>`;\n\nreturn [{ json: { subject: `🎯 JobPilot: ${items.length} New Jobs + Resumes Ready — ${today}`, body: html } }];"
+        "jsCode": "const items       = $('🔗 Extract PDF Link').all();\nconst today       = new Date().toISOString().slice(0, 10);\nconst esc         = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');\n\n// Get email from profiles (joined in Get All Users query)\nconst firstItem  = items[0]?.json || {};\nconst allUsers   = $('📋 Get All Users').first().json;\nconst userData   = allUsers.find(u => u.user_id === firstItem.userId);\nconst userEmail  = userData?.profiles?.email || '';\n\nlet rows = items.map(item => {\n  const j = item.json;\n  return `<tr>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;font-weight:700;\">${esc(j.company)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\">${esc(j.title)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\">${esc(j.postedAt)}</td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\"><a href=\"${j.jobLink}\">🔗 Apply</a></td>\n    <td style=\"padding:10px;border-bottom:1px solid #eee;\"><a href=\"${j.pdfLink}\">📄 Resume PDF</a></td>\n  </tr>`;\n}).join('');\n\nconst html = `<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#222;\">\n  <h2 style=\"color:#2563EB;\">🚀 JobPilot Daily Report — ${today}</h2>\n  <p>Your AI-optimized resumes are ready. <strong>${items.length} new jobs</strong> found today.</p>\n  <table style=\"border-collapse:collapse;width:100%;\">\n    <thead><tr style=\"background:#f5f5f5;\">\n      <th style=\"padding:10px;text-align:left;\">Company</th>\n      <th style=\"padding:10px;text-align:left;\">Role</th>\n      <th style=\"padding:10px;text-align:left;\">Posted</th>\n      <th style=\"padding:10px;text-align:left;\">Job Link</th>\n      <th style=\"padding:10px;text-align:left;\">Optimized Resume</th>\n    </tr></thead>\n    <tbody>${rows}</tbody>\n  </table>\n  <p style=\"color:#aaa;font-size:11px;margin-top:20px;\">Sent by JobPilot AI — ${today}</p>\n</div>`;\n\nreturn [{ json: { email: userEmail, subject: `🎯 JobPilot: ${items.length} New Jobs + Resumes Ready — ${today}`, body: html } }];"
       },
       "id": "node-buildemail",
       "name": "📧 Build Email Summary",
@@ -524,7 +524,7 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $('⚙️ Load Prefs').first().json[0].notification_email || 'REPLACE_YOUR_EMAIL' }}",
+        "sendTo": "={{ $json.email }}",
         "subject": "={{ $json.subject }}",
         "message": "={{ $json.body }}",
         "options": { "appendAttribution": false }
