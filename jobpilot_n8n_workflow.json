@@ -78,7 +78,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/user_settings?select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -150,7 +150,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/job_preferences?user_id=eq.{{ $('🔄 Loop Users').item.json.user_id }}&select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources",
+        "url": "={{ $('⚙️ Config').first().json.supabaseUrl }}/rest/v1/user_settings?user_id=eq.{{ $('🔄 Loop Users').item.json.user_id }}&select=user_id,target_roles,target_locations,salary_min,salary_max,job_types,sources",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
