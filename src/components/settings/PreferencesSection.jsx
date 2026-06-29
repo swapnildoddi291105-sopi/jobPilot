@@ -5,9 +5,10 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useSettings, useUpdateSettings } from "@/hooks/useJobs"
 import { useState, useEffect } from "react"
-import { Loader2, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2, X, Plus } from "lucide-react"
 
 function ToggleItem({ label, description, checked, onChange, id }) {
   return (
@@ -25,6 +26,10 @@ export function PreferencesSection() {
   const { data: settings, isLoading } = useSettings()
   const { mutate: updateSettings, isPending: isSaving } = useUpdateSettings()
   const [saved, setSaved] = useState(false)
+  const [newRole, setNewRole] = useState("")
+  const [newLocation, setNewLocation] = useState("")
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false)
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false)
   const [form, setForm] = useState({
     targetRoles: [],
     targetLocations: [],
@@ -103,13 +108,52 @@ export function PreferencesSection() {
             <Label className="text-sm font-medium">Target Roles</Label>
             <div className="flex flex-wrap gap-2">
               {form.targetRoles.map((role, i) => (
-                <Badge key={i} variant="secondary" className="px-3 py-1">
+                <Badge key={i} variant="secondary" className="px-3 py-1 gap-1">
                   {role}
+                  <X
+                    className="h-3 w-3 cursor-pointer hover:text-destructive"
+                    onClick={() => setForm({ ...form, targetRoles: form.targetRoles.filter((_, j) => j !== i) })}
+                  />
                 </Badge>
               ))}
-              <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-primary/10 transition-colors">
-                + Add Role
-              </Badge>
+              <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+                <DialogTrigger asChild>
+                  <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-primary/10 transition-colors">
+                    <Plus className="h-3 w-3 mr-1" /> Add Role
+                  </Badge>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Add Target Role</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g. Software Engineer"
+                      value={newRole}
+                      onChange={(e) => setNewRole(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newRole.trim()) {
+                          setForm({ ...form, targetRoles: [...form.targetRoles, newRole.trim()] })
+                          setNewRole("")
+                          setRoleDialogOpen(false)
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (newRole.trim()) {
+                          setForm({ ...form, targetRoles: [...form.targetRoles, newRole.trim()] })
+                          setNewRole("")
+                          setRoleDialogOpen(false)
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -118,13 +162,52 @@ export function PreferencesSection() {
             <Label className="text-sm font-medium">Target Locations</Label>
             <div className="flex flex-wrap gap-2">
               {form.targetLocations.map((loc, i) => (
-                <Badge key={i} variant="secondary" className="px-3 py-1">
+                <Badge key={i} variant="secondary" className="px-3 py-1 gap-1">
                   {loc}
+                  <X
+                    className="h-3 w-3 cursor-pointer hover:text-destructive"
+                    onClick={() => setForm({ ...form, targetLocations: form.targetLocations.filter((_, j) => j !== i) })}
+                  />
                 </Badge>
               ))}
-              <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-primary/10 transition-colors">
-                + Add Location
-              </Badge>
+              <Dialog open={locationDialogOpen} onOpenChange={setLocationDialogOpen}>
+                <DialogTrigger asChild>
+                  <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-primary/10 transition-colors">
+                    <Plus className="h-3 w-3 mr-1" /> Add Location
+                  </Badge>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Add Target Location</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g. San Francisco, CA"
+                      value={newLocation}
+                      onChange={(e) => setNewLocation(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newLocation.trim()) {
+                          setForm({ ...form, targetLocations: [...form.targetLocations, newLocation.trim()] })
+                          setNewLocation("")
+                          setLocationDialogOpen(false)
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (newLocation.trim()) {
+                          setForm({ ...form, targetLocations: [...form.targetLocations, newLocation.trim()] })
+                          setNewLocation("")
+                          setLocationDialogOpen(false)
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
